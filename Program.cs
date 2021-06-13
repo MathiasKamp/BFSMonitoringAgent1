@@ -12,9 +12,9 @@ namespace BFSMonitoringAgent1
             
             using (var service = new BfsMonitoringService())
             {
-                //ServiceBase.Run(service);
+                ServiceBase.Run(service);
                 
-                service.OnDebug();
+                //service.OnDebug();
             }
         }
     }

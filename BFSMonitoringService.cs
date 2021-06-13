@@ -27,8 +27,8 @@ namespace BFSMonitoringAgent1
 
         private string CreateLog()
         {
-            string logDirectory = ConfigCollector.GetRootDirectoryForOutput();
-            var logFile = logDirectory + $@"\log_{DateTime.Now:dd-MM-yyyy}.txt";
+            string logDirectory = ConfigCollector.GetRootDirectoryForOutput() + @"\log";
+            var logFile = logDirectory + $@"\log{DateTime.Now:dd-MM-yyyy}.log";
             if (!Directory.Exists(logDirectory)) Directory.CreateDirectory(logDirectory);
             if (!File.Exists(logFile)) File.Create(logFile).Close();
 
@@ -59,7 +59,7 @@ namespace BFSMonitoringAgent1
 
                             if (val.Length > 0)
                             {
-                                CreateMessage(ServiceName, val, DateTime.Now);
+                                CreateMessage(ServiceName, val, DateTime.Now.ToString("dd_MM_yyyy_hh_mm_ss"));
                             }
                         }
 
@@ -139,9 +139,9 @@ namespace BFSMonitoringAgent1
             return val = "red";
         }
         
-        public void CreateMessage(string agentName, string statusCode, DateTime checkedTimeStamp)
+        public void CreateMessage(string agentName, string statusCode, string checkedTimeStamp)
         {
-            string path = ConfigCollector.GetPathToBeChecked() + @"\messagesToSend";
+            string path = ConfigCollector.GetRootDirectoryForOutput() + @"\messagesToSend";
             string message = path + $@"\{agentName}_{DateTime.Now:dd_MM_yy_HH_mm_ss}.csv";
             if (!Directory.Exists(path)) Directory.CreateDirectory(path);
             if (!File.Exists(message)) File.Create(message).Close();

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.ServiceProcess;
@@ -8,7 +9,7 @@ namespace BFSMonitoringAgent1
 {
     public class BfsMonitoringService : ServiceBase
     {
-        private ConfigCollector ConfigCollector = new ConfigCollector();
+        private readonly ConfigCollector ConfigCollector = new ConfigCollector();
         private Thread Worker = null;
 
         public BfsMonitoringService()
@@ -55,11 +56,20 @@ namespace BFSMonitoringAgent1
                                                        DateTime.Now.ToString("dd-MM-yyyy hh:mm:ss") + ""));
                             sw.Close();
 
-                            var val = CheckFileTimeStampDifference();
+                            var val = GetOldestFileInDirectories();
 
-                            if (val.Length > 0)
+                            DateTime? oldest = null;
+                            if (val.Count > 0)
                             {
-                                CreateMessage(ServiceName, val, DateTime.Now.ToString("dd_MM_yyyy_hh_mm_ss"));
+                                oldest = GetOldestFileDate(val);
+                            }
+                            
+                            var statusCode = GetFileTimeStampStatusCode(oldest);
+
+
+                            if (!string.IsNullOrEmpty(statusCode))
+                            {
+                                CreateMessage(ServiceName, statusCode, DateTime.Now.ToString("dd_MM_yyyy_hh_mm_ss"));
                             }
                         }
 
@@ -91,28 +101,59 @@ namespace BFSMonitoringAgent1
             OnStart(null);
         }
 
-        public bool IsWithin(int value, int minimum, int maximum)
+        private bool IsWithin(double value, double minimum, double maximum)
         {
             return value >= minimum && value <= maximum;
         }
 
+        public List<DateTime> GetOldestFileInDirectories()
+        {
+            string filePath = ConfigCollector.GetPathToBeChecked();
+            var filePathList = filePath.Split(',');
+            var fileDates = new List<DateTime>();
 
-        public string CheckFileTimeStampDifference()
+            if (filePathList.Length > 0)
+            {
+                foreach (var dir in filePathList)
+                {
+                    var tempFile = new DirectoryInfo(dir);
+
+                    if (tempFile.GetFiles().Length > 0)
+                    {
+                        var oldestFile = new DirectoryInfo(dir).GetFiles()
+                            .OrderBy(f => f.LastWriteTime).First();
+
+                        fileDates.Add(oldestFile.LastWriteTime);
+                    }
+
+                    else
+                    {
+                        fileDates.Add(DateTime.Now);
+                    }
+                }
+            }
+
+            return fileDates;
+        }
+
+        public DateTime GetOldestFileDate(List<DateTime> fileDates)
+        {
+            DateTime oldestTime = fileDates.OrderBy(a => a).First();
+
+            return oldestTime;
+        }
+
+
+        private string GetFileTimeStampStatusCode(DateTime? oldestFileTimeStamp)
         {
             string val = null;
             try
             {
-                string filePath = ConfigCollector.GetPathToBeChecked() + @"\";
-
-                var oldestFile = new DirectoryInfo(filePath).GetFiles()
-                    .OrderBy(f => f.LastWriteTime).First();
-
-                if (oldestFile.Exists)
+                var currentDate = DateTime.Now;
+                TimeSpan? timeDifference = currentDate - oldestFileTimeStamp;
+                if (timeDifference != null)
                 {
-                    var fileDate = oldestFile.LastWriteTime;
-                    var currentDate = DateTime.Now;
-                    var timeDifference = currentDate - fileDate;
-                    int timeDif = timeDifference.Minutes;
+                    var timeDif = timeDifference.Value.TotalMinutes;
                     var greenDif = ConfigCollector.GetMinuteDifferenceForGreen();
                     var yellowDif = ConfigCollector.GetMinuteDifferenceForYellow();
 
@@ -128,7 +169,6 @@ namespace BFSMonitoringAgent1
                         val = "yellow";
                         return val;
                     }
-                    
                 }
             }
             catch (Exception e)
@@ -138,8 +178,8 @@ namespace BFSMonitoringAgent1
 
             return val = "red";
         }
-        
-        public void CreateMessage(string agentName, string statusCode, string checkedTimeStamp)
+
+        private void CreateMessage(string agentName, string statusCode, string checkedTimeStamp)
         {
             string path = ConfigCollector.GetRootDirectoryForOutput() + @"\messagesToSend";
             string message = path + $@"\{agentName}_{DateTime.Now:dd_MM_yy_HH_mm_ss}.csv";

@@ -69,9 +69,12 @@ C:\Users\mathi\RiderProjects\BFSMonitoringAgent1\bin\Release\System.ServiceModel
 C:\Users\mathi\RiderProjects\BFSMonitoringAgent1\bin\Release\System.ServiceProcess.ServiceController.xml
 C:\Users\mathi\RiderProjects\BFSMonitoringAgent1\bin\Release\System.Text.Encoding.CodePages.xml
 C:\Users\mathi\RiderProjects\BFSMonitoringAgent1\bin\Release\System.Threading.AccessControl.xml
-C:\Users\mathi\RiderProjects\BFSMonitoringAgent1\obj\Release\BFSMonitoringAgent1.csprojAssemblyReference.cache
 C:\Users\mathi\RiderProjects\BFSMonitoringAgent1\obj\Release\BFSMonitoringAgent1.exe.config
 C:\Users\mathi\RiderProjects\BFSMonitoringAgent1\obj\Release\BFSMonitoringAgent1.csproj.CoreCompileInputs.cache
 C:\Users\mathi\RiderProjects\BFSMonitoringAgent1\obj\Release\BFSMonitoringAgent1.csproj.CopyComplete
 C:\Users\mathi\RiderProjects\BFSMonitoringAgent1\obj\Release\BFSMonitoringAgent1.exe
 C:\Users\mathi\RiderProjects\BFSMonitoringAgent1\obj\Release\BFSMonitoringAgent1.pdb
+C:\Users\mathi\RiderProjects\BFSMonitoringAgent1\obj\Release\BFSMonitoringAgent1.csproj.AssemblyReference.cache
+C:\Users\mathi\RiderProjects\BFSMonitoringAgent1\bin\Release\Json.Net.dll
+C:\Users\mathi\RiderProjects\BFSMonitoringAgent1\bin\Release\Newtonsoft.Json.dll
+C:\Users\mathi\RiderProjects\BFSMonitoringAgent1\bin\Release\Newtonsoft.Json.xml

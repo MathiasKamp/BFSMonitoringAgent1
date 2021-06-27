@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.ServiceProcess;
+using System.Text;
 using System.Threading;
+
 
 namespace BFSMonitoringAgent1
 {
@@ -11,7 +13,7 @@ namespace BFSMonitoringAgent1
     {
         private readonly ConfigCollector ConfigCollector = new ConfigCollector();
         private Thread Worker = null;
-
+        
         public BfsMonitoringService()
         {
             ServiceName = "BFSMonitoringService_" + ConfigCollector.GetMonitoringAgentName();
@@ -38,7 +40,7 @@ namespace BFSMonitoringAgent1
 
         private void CheckFiles()
         {
-            var nSleep = 0.5;
+            var nSleep = 0.5; // run worker every 30 seconds
 
             {
                 try
@@ -52,26 +54,18 @@ namespace BFSMonitoringAgent1
 
                         using (var sw = new StreamWriter(log, true))
                         {
-                            sw.WriteLine(string.Format("BFSMonitoring checked : " +
-                                                       DateTime.Now.ToString("dd-MM-yyyy hh:mm:ss") + ""));
-                            sw.Close();
-
-                            var val = GetOldestFileInDirectories();
-
-                            DateTime? oldest = null;
-                            if (val.Count > 0)
-                            {
-                                oldest = GetOldestFileDate(val);
-                            }
+                            string agentName = ConfigCollector.GetMonitoringAgentName();
+                            sw.WriteLine(agentName + " has started to check files at : " +
+                                         DateTime.Now.ToString(@"dd-MM-yyyy hh:mm:ss"));
                             
-                            var statusCode = GetFileTimeStampStatusCode(oldest);
-
-
-                            if (!string.IsNullOrEmpty(statusCode))
-                            {
-                                CreateMessage(ServiceName, statusCode, DateTime.Now.ToString("dd_MM_yyyy_hh_mm_ss"));
-                            }
+                            sw.Close();
+                            
                         }
+
+                        var statusMessage = CreateStatusMessage();
+
+                        CreateMessage(statusMessage);
+                        
 
                         Thread.Sleep((int) ((long) (nSleep * 60 * 1000)));
                     }
@@ -101,16 +95,43 @@ namespace BFSMonitoringAgent1
             OnStart(null);
         }
 
-        private bool IsWithin(double value, double minimum, double maximum)
+        private static bool IsWithin(double value, double minimum, double maximum)
         {
             return value >= minimum && value <= maximum;
         }
 
-        public List<DateTime> GetOldestFileInDirectories()
+        public StatusMessage CreateStatusMessage()
         {
-            string filePath = ConfigCollector.GetPathToBeChecked();
+            var file = GetOldestFileInDirectories();
+            string agentName = ConfigCollector.GetMonitoringAgentName();
+            string val = null;
+            if (file.Count > 0)
+            {
+                var oldestFile = GetOldestFile(file);
+
+                var fileStatus = GetFileTimeStampStatusCode(oldestFile.LastWriteTime);
+
+                return new StatusMessage(
+                    agentName: agentName,
+                    directory: oldestFile.DirectoryName,
+                    fileName: oldestFile.Name,
+                    dateChecked: DateTime.Now,
+                    lastModifiedDate: Convert.ToDateTime(oldestFile.LastWriteTime.ToString("dd_MM_yyyy_hh_mm_ss")),
+                    status: fileStatus
+                );
+            }
+
+            else
+            {
+                return new StatusMessage(agentName: agentName, status: GetFileTimeStampStatusCode(DateTime.Now));
+            }
+        }
+
+        private List<FileInfo> GetOldestFileInDirectories()
+        {
+            var filePath = ConfigCollector.GetPathToBeChecked();
             var filePathList = filePath.Split(',');
-            var fileDates = new List<DateTime>();
+            var oldFiles = new List<FileInfo>();
 
             if (filePathList.Length > 0)
             {
@@ -123,37 +144,32 @@ namespace BFSMonitoringAgent1
                         var oldestFile = new DirectoryInfo(dir).GetFiles()
                             .OrderBy(f => f.LastWriteTime).First();
 
-                        fileDates.Add(oldestFile.LastWriteTime);
-                    }
-
-                    else
-                    {
-                        fileDates.Add(DateTime.Now);
+                        oldFiles.Add(oldestFile);
                     }
                 }
             }
 
-            return fileDates;
+            return oldFiles;
         }
 
-        public DateTime GetOldestFileDate(List<DateTime> fileDates)
+        private static FileInfo GetOldestFile(List<FileInfo> files)
         {
-            DateTime oldestTime = fileDates.OrderBy(a => a).First();
+            var oldestFile = files.OrderBy(a => a.LastWriteTime).First();
 
-            return oldestTime;
+            return oldestFile;
         }
 
 
-        private string GetFileTimeStampStatusCode(DateTime? oldestFileTimeStamp)
+        private string GetFileTimeStampStatusCode(DateTime oldestFileTimeStamp)
         {
             string val = null;
             try
             {
                 var currentDate = DateTime.Now;
-                TimeSpan? timeDifference = currentDate - oldestFileTimeStamp;
-                if (timeDifference != null)
+                var timeDifference = currentDate - oldestFileTimeStamp;
+                if (timeDifference.TotalMinutes > 0)
                 {
-                    var timeDif = timeDifference.Value.TotalMinutes;
+                    var timeDif = timeDifference.TotalMinutes;
                     var greenDif = ConfigCollector.GetMinuteDifferenceForGreen();
                     var yellowDif = ConfigCollector.GetMinuteDifferenceForYellow();
 
@@ -179,10 +195,10 @@ namespace BFSMonitoringAgent1
             return val = "red";
         }
 
-        private void CreateMessage(string agentName, string statusCode, string checkedTimeStamp)
+        private void CreateMessage(StatusMessage statusMessage)
         {
-            string path = ConfigCollector.GetRootDirectoryForOutput() + @"\messagesToSend";
-            string message = path + $@"\{agentName}_{DateTime.Now:dd_MM_yy_HH_mm_ss}.csv";
+            var path = ConfigCollector.GetRootDirectoryForOutput() + @"\messagesToSend";
+            var message = path + $@"\{statusMessage.AgentName}_{DateTime.Now:dd_MM_yy_HH_mm_ss}.csv";
             if (!Directory.Exists(path)) Directory.CreateDirectory(path);
             if (!File.Exists(message)) File.Create(message).Close();
 
@@ -190,9 +206,17 @@ namespace BFSMonitoringAgent1
             {
                 using (var sw = new StreamWriter(message, true))
                 {
-                    sw.WriteLine("agentName, statusCode, checkedTimeStamp");
-                    sw.WriteLine(agentName + "," + statusCode + "," + checkedTimeStamp);
-                    sw.Close();
+                    if (statusMessage.FileName != null)
+                    {
+                        sw.WriteLine(statusMessage.MessageWithFile());
+                        sw.Close();
+                    }
+
+                    else
+                    {
+                        sw.WriteLine(statusMessage.MessageWithDummyFile());
+                        sw.Close();
+                    }
                 }
             }
             catch (Exception e)

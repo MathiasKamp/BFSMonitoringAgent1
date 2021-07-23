@@ -78,3 +78,7 @@ C:\Users\mathi\RiderProjects\BFSMonitoringAgent1\obj\Release\BFSMonitoringAgent1
 C:\Users\mathi\RiderProjects\BFSMonitoringAgent1\bin\Release\Json.Net.dll
 C:\Users\mathi\RiderProjects\BFSMonitoringAgent1\bin\Release\Newtonsoft.Json.dll
 C:\Users\mathi\RiderProjects\BFSMonitoringAgent1\bin\Release\Newtonsoft.Json.xml
+C:\Users\mathi\RiderProjects\BFSMonitoringAgent1\bin\Release\System.Net.Http.Extensions.dll
+C:\Users\mathi\RiderProjects\BFSMonitoringAgent1\bin\Release\System.Net.Http.Formatting.dll
+C:\Users\mathi\RiderProjects\BFSMonitoringAgent1\bin\Release\System.Net.Http.Primitives.dll
+C:\Users\mathi\RiderProjects\BFSMonitoringAgent1\bin\Release\System.Net.Http.Formatting.xml

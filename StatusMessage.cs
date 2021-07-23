@@ -44,7 +44,7 @@ namespace BFSMonitoringAgent1
 
         public string MessageWithDummyFile()
         {
-            return AgentName + "," + "noFilesFound" + "," + Status.ToString();
+            return AgentName + "," + "NoFiles" + "," + Status.ToString();
         }
     }
 }

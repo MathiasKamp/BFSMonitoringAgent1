@@ -2,9 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
+using System.Net.Http.Headers;
 using System.ServiceProcess;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
+using Newtonsoft.Json;
 
 
 namespace BFSMonitoringAgent1
@@ -116,7 +120,7 @@ namespace BFSMonitoringAgent1
                     directory: oldestFile.DirectoryName,
                     fileName: oldestFile.Name,
                     dateChecked: DateTime.Now,
-                    lastModifiedDate: Convert.ToDateTime(oldestFile.LastWriteTime.ToString("dd_MM_yyyy_hh_mm_ss")),
+                    lastModifiedDate: Convert.ToDateTime(oldestFile.LastWriteTime),
                     status: fileStatus
                 );
             }
@@ -197,32 +201,72 @@ namespace BFSMonitoringAgent1
 
         private void CreateMessage(StatusMessage statusMessage)
         {
-            var path = ConfigCollector.GetRootDirectoryForOutput() + @"\messagesToSend";
-            var message = path + $@"\{statusMessage.AgentName}_{DateTime.Now:dd_MM_yy_HH_mm_ss}.csv";
-            if (!Directory.Exists(path)) Directory.CreateDirectory(path);
-            if (!File.Exists(message)) File.Create(message).Close();
+            var outPutMethod = ConfigCollector.GetOutputMethod();
 
-            try
+            switch (outPutMethod)
             {
-                using (var sw = new StreamWriter(message, true))
+                case 1:
+                    var path = ConfigCollector.GetRootDirectoryForOutput() + @"\messagesToSend";
+                    var message = path + $@"\{statusMessage.AgentName}_{DateTime.Now:dd_MM_yy_HH_mm_ss}.csv";
+                    if (!Directory.Exists(path)) Directory.CreateDirectory(path);
+                    if (!File.Exists(message)) File.Create(message).Close();
+
+                    try
+                    {
+                        using (var sw = new StreamWriter(message, true))
+                        {
+                            if (statusMessage.FileName != null)
+                            {
+                                sw.WriteLine(statusMessage.MessageWithFile());
+                                sw.Close();
+                            }
+
+                            else
+                            {
+                                sw.WriteLine(statusMessage.MessageWithDummyFile());
+                                sw.Close();
+                            }
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        throw e;
+                    }
+                    break;
+                
+                
+                case 2:
+                    PostStatusMessage(statusMessage);
+                    break;
+                
+            }
+            
+            
+        }
+
+        private async Task PostStatusMessage(StatusMessage statusMessage)
+        {
+            var client = new HttpClient();
+            string webApiAddress = ConfigCollector.GetWebApiAddress();
+            client.BaseAddress = new Uri(webApiAddress);
+            client.DefaultRequestHeaders.Accept.Clear();
+            client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            var content = new StringContent(JsonConvert.SerializeObject(statusMessage), Encoding.UTF8,
+                "application/json");
+            var response = await client.PostAsync("BfsAgent", content);
+
+            
+                if (response.IsSuccessStatusCode)
                 {
-                    if (statusMessage.FileName != null)
-                    {
-                        sw.WriteLine(statusMessage.MessageWithFile());
-                        sw.Close();
-                    }
-
-                    else
-                    {
-                        sw.WriteLine(statusMessage.MessageWithDummyFile());
-                        sw.Close();
-                    }
+                    Console.WriteLine("data posted");
                 }
-            }
-            catch (Exception e)
-            {
-                throw e;
-            }
+
+                else
+                {
+                    Console.WriteLine($"Failed to post data. Status code:{response.StatusCode}"); 
+                }
+            
+            
         }
     }
 }

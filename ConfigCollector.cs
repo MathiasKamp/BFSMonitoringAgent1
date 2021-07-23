@@ -8,14 +8,19 @@ namespace BFSMonitoringAgent1
     {
         private StringBuilder sb = new StringBuilder();
 
+        public string GetWebApiAddress()
+        {
+            return ConfigurationSettings.AppSettings["WebApiAddress"];
+        }
+        
         public string GetPathToBeChecked()
         {
             return ConfigurationSettings.AppSettings["PathToBeChecked"];
         }
 
-        public string GetOutputMethod()
+        public int GetOutputMethod()
         {
-            return ConfigurationSettings.AppSettings["OutputMethod"];
+            return Convert.ToInt32(ConfigurationSettings.AppSettings["OutputMethod"]);
         }
 
         public  string GetMonitoringAgentName()
